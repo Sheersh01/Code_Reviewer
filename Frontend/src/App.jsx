@@ -48,6 +48,21 @@ const sampleSnippets = [
   },
 ];
 
+function getInitialTheme() {
+  if (typeof window === "undefined") {
+    return "light";
+  }
+
+  const savedTheme = window.localStorage.getItem("code-reviewer-theme");
+  if (savedTheme === "light" || savedTheme === "dark") {
+    return savedTheme;
+  }
+
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
+
 function App() {
   const [code, setCode] = useState(`function sum() {
   return 1 + 1;
@@ -62,6 +77,7 @@ function App() {
   const lastSubmittedCodeRef = useRef("");
   const cooldownUntilRef = useRef(0);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const [theme, setTheme] = useState(getInitialTheme);
 
   function normalizeCode(value) {
     return value.trim().replace(/\r\n/g, "\n");
@@ -84,6 +100,11 @@ function App() {
     const timer = window.setTimeout(() => setCopiedTarget(""), 1800);
     return () => window.clearTimeout(timer);
   }, [copiedTarget]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    window.localStorage.setItem("code-reviewer-theme", theme);
+  }, [theme]);
 
   const normalizedCode = useMemo(() => normalizeCode(code), [code]);
   const codeLines = useMemo(
@@ -164,6 +185,10 @@ function App() {
     setNotice(`Loaded review from ${item.createdAt}.`);
   }
 
+  function toggleTheme() {
+    setTheme((currentTheme) => (currentTheme === "light" ? "dark" : "light"));
+  }
+
   async function reviewCode() {
     if (!normalizedCode) {
       setError("Code is required");
@@ -235,7 +260,17 @@ function App() {
             jump back to previous results without spending extra quota.
           </p>
         </div>
-        <div className="hero-metrics">
+        <div className="hero-tools">
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={toggleTheme}
+            aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+          >
+            <span>{theme === "light" ? "Dark mode" : "Light mode"}</span>
+            <strong>{theme === "light" ? "Moon" : "Sun"}</strong>
+          </button>
+          <div className="hero-metrics">
           <div className="metric-card">
             <span>Lines</span>
             <strong>{codeLines}</strong>
@@ -248,6 +283,7 @@ function App() {
             <span>Status</span>
             <strong>{codeStatus}</strong>
           </div>
+        </div>
         </div>
       </section>
 
